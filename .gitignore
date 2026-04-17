@@ -40,4 +40,5 @@ pnpm-debug.log*
 !.vscode/settings.json
 
 # Local agent/workflow artifacts
+.codex/
 .superpowers/
