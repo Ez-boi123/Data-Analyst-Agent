@@ -1,0 +1,39 @@
+{
+  "name": "data-analyst-agent",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "test": "vitest run",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@tanstack/react-table": "latest",
+    "echarts": "latest",
+    "lucide-react": "latest",
+    "next": "latest",
+    "next-intl": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "reactflow": "latest",
+    "zustand": "latest"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.59.1",
+    "@testing-library/jest-dom": "latest",
+    "@playwright/test": "^1.57.0",
+    "@testing-library/react": "latest",
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "eslint": "latest",
+    "eslint-config-next": "latest",
+    "jsdom": "latest",
+    "tailwindcss": "^3.4.17",
+    "typescript": "latest",
+    "vitest": "latest"
+  }
+}
