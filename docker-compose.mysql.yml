@@ -1,0 +1,29 @@
+name: data-agent-demo
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: data-agent-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: data_agent_demo
+      MYSQL_USER: agent
+      MYSQL_PASSWORD: agent_demo_123
+      MYSQL_ROOT_PASSWORD: root_demo_123
+      TZ: Asia/Shanghai
+    ports:
+      - "3307:3306"
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uagent -pagent_demo_123 --silent"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    volumes:
+      - mysql_demo_data:/var/lib/mysql
+
+volumes:
+  mysql_demo_data:

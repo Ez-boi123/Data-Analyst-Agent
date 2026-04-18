@@ -6,7 +6,7 @@ import { AnalysisWorkbench } from "./analysis-workbench";
 
 describe("AnalysisWorkbench", () => {
   it("renders the hybrid workbench with chat, evidence timeline, SQL repair, and delivery actions", () => {
-    render(React.createElement(AnalysisWorkbench, { task: sampleTask }));
+    render(React.createElement(AnalysisWorkbench, { initialTask: sampleTask }));
 
     expect(screen.getByText("Agent 对话")).toBeInTheDocument();
     expect(screen.getByText("证据时间线")).toBeInTheDocument();

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowRight,
   CheckCircle2,
@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import type { AnalysisStep, AnalysisTask } from "@/lib/types";
 import { getTaskAuditItems } from "@/lib/sample-task";
+import { getTask, streamFollowUp, streamTaskRun, type AgentStreamEvent } from "@/lib/api";
 import { SchemaGraph } from "./schema-graph";
 import { ResultTable } from "./result-table";
 import { InsightChart } from "./insight-chart";
@@ -65,14 +66,93 @@ const sqlKeywords = new Set([
 
 const sqlFunctions = new Set(["SUM", "COUNT", "AVG", "MIN", "MAX", "ROUND", "COALESCE", "DATE_TRUNC"]);
 
-export function AnalysisWorkbench({ task }: { task: AnalysisTask }) {
+export function AnalysisWorkbench({ initialTask, autoRun = false }: { initialTask: AnalysisTask; autoRun?: boolean }) {
+  const [task, setTask] = useState(initialTask);
+  const [isRunning, setIsRunning] = useState(false);
+  const [streamingInsight, setStreamingInsight] = useState("");
   const [activeStepId, setActiveStepId] = useState("step-repair");
   const [activeTab, setActiveTab] = useState<DetailTab>("SQL");
   const [isChatExpanded, setIsChatExpanded] = useState(true);
+  const autoRunStarted = useRef(false);
   const activeStep = useMemo(
     () => task.steps.find((step) => step.id === activeStepId) ?? task.steps[0],
     [activeStepId, task.steps]
   );
+
+  useEffect(() => {
+    setTask(initialTask);
+  }, [initialTask]);
+
+  useEffect(() => {
+    if (!autoRun || autoRunStarted.current) return;
+    const storageKey = `data-agent-run-${initialTask.id}`;
+    if (typeof window !== "undefined" && window.sessionStorage.getItem(storageKey)) return;
+    autoRunStarted.current = true;
+    window.sessionStorage.setItem(storageKey, "1");
+    window.history.replaceState(null, "", `/tasks/${initialTask.id}`);
+    void runStream(() => streamTaskRun(initialTask.id, handleStreamEvent));
+  }, [autoRun, initialTask.id]);
+
+  async function runStream(streamer: () => Promise<void>) {
+    setIsRunning(true);
+    setStreamingInsight("");
+    try {
+      await streamer();
+      const refreshed = await getTask(task.id);
+      setTask(refreshed);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsRunning(false);
+    }
+  }
+
+  function handleStreamEvent(event: AgentStreamEvent) {
+    if (event.event === "task") {
+      setTask(event.data);
+    }
+    if (event.event === "step") {
+      setTask((current) => mergeStep(current, event.data));
+      setActiveStepId(event.data.id);
+      if (event.data.details.sql) setActiveTab("SQL");
+      else if (event.data.details.schema) setActiveTab("Schema");
+      else if (event.data.details.insight) setActiveTab("洞察");
+    }
+    if (event.event === "token") {
+      setStreamingInsight((current) => current + event.data.content);
+    }
+    if (event.event === "error") {
+      setTask((current) => ({
+        ...current,
+        status: "failed_recoverable",
+        steps: [
+          ...current.steps,
+          {
+            id: `client-error-${Date.now()}`,
+            type: "failed_recoverable",
+            status: "failed_recoverable",
+            title: "可恢复失败",
+            summary: event.data.message,
+            evidence: [event.data.message],
+            confidence: 0.5,
+            details: { recoveryActions: ["检查后端服务", "检查模型配置", "修改问题后重试"] }
+          }
+        ]
+      }));
+    }
+  }
+
+  function handleFollowUp(message: string) {
+    setTask((current) => ({
+      ...current,
+      messages: [...(current.messages ?? []), { role: "user", content: message, createdAt: new Date().toISOString() }]
+    }));
+    void runStream(() => streamFollowUp(task.id, message, handleStreamEvent));
+  }
+
+  if (!activeStep) {
+    return <div className="panel"><div className="panel-body">任务初始化中...</div></div>;
+  }
 
   return (
     <div className={`workspace ${isChatExpanded ? "" : "chat-collapsed"}`}>
@@ -88,7 +168,7 @@ export function AnalysisWorkbench({ task }: { task: AnalysisTask }) {
               {isChatExpanded ? <ChevronsLeft size={16} /> : <ChevronsRight size={16} />}
             </button>
             <strong>Agent 对话</strong>
-            <span className="status-pill">运行完成</span>
+            <span className="status-pill">{isRunning ? "运行中" : task.status === "completed" ? "运行完成" : "等待执行"}</span>
           </div>
           <button
             aria-label="展开 Agent 对话栏"
@@ -101,24 +181,28 @@ export function AnalysisWorkbench({ task }: { task: AnalysisTask }) {
           </button>
           <div className="panel-body">
             <div className="agent-chat-messages">
-              <div className="message user">
-                <strong>{task.createdBy}</strong>
-                <p>{task.question}</p>
-              </div>
-              <div className="message">
-                <strong>Data Analyst Agent</strong>
-                <p>我会先确认口径和数据域，再展示可审计的表路径、SQL、修复和结论。</p>
-              </div>
+              {(task.messages?.length ? task.messages : [{ role: "user", content: task.question, createdAt: task.createdAt }]).map((message, index) => (
+                <div className={`message ${message.role === "user" ? "user" : ""}`} key={`${message.createdAt}-${index}`}>
+                  <strong>{message.role === "user" ? task.createdBy : "Data Analyst Agent"}</strong>
+                  <p>{message.content}</p>
+                </div>
+              ))}
+              {streamingInsight ? (
+                <div className="message">
+                  <strong>Data Analyst Agent</strong>
+                  <p>{streamingInsight}</p>
+                </div>
+              ) : null}
               <div className="message">
                 <strong>关键澄清</strong>
                 <ul className="evidence-list">
-                  <li>业务域：经营分析 / 交易域</li>
-                  <li>时间：最近 7 天，对比前 7 天</li>
-                  <li>GMV：支付成功金额，不扣退款</li>
+                  <li>业务域：{task.businessDomain}</li>
+                  <li>数据边界：只使用当前 Schema 中存在的表和字段</li>
+                  <li>指标口径：以业务词典、SQL 和查询结果字段为准</li>
                 </ul>
               </div>
             </div>
-            <FollowUpComposer />
+            <FollowUpComposer disabled={isRunning} onSubmit={handleFollowUp} />
           </div>
         </div>
       </aside>
@@ -135,7 +219,7 @@ export function AnalysisWorkbench({ task }: { task: AnalysisTask }) {
             分享任务
           </Link>
         </div>
-        <TaskSummary task={task} />
+        <TaskSummary isRunning={isRunning} task={task} />
         <div className="panel">
           <div className="panel-header">
             <strong>证据时间线</strong>
@@ -174,13 +258,30 @@ export function AnalysisWorkbench({ task }: { task: AnalysisTask }) {
   );
 }
 
-function FollowUpComposer() {
+function mergeStep(task: AnalysisTask, step: AnalysisStep): AnalysisTask {
+  const index = task.steps.findIndex((item) => item.id === step.id);
+  const steps = index >= 0 ? [...task.steps] : [...task.steps, step];
+  if (index >= 0) {
+    steps[index] = step;
+  }
+  return {
+    ...task,
+    status: step.status === "failed_recoverable" ? "failed_recoverable" : step.type,
+    steps
+  };
+}
+
+function FollowUpComposer({ disabled, onSubmit }: { disabled: boolean; onSubmit: (message: string) => void }) {
   const [followUp, setFollowUp] = useState("");
   const [selectedModel, setSelectedModel] = useState<(typeof analysisModels)[number]>(analysisModels[0]);
   const [isModelPickerOpen, setIsModelPickerOpen] = useState(false);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const trimmed = followUp.trim();
+    if (!trimmed) return;
+    onSubmit(trimmed);
+    setFollowUp("");
   }
 
   return (
@@ -192,7 +293,7 @@ function FollowUpComposer() {
           value={followUp}
           onChange={(event) => setFollowUp(event.target.value)}
         />
-        <button aria-label="发送追问" className="prompt-send" data-empty={!followUp.trim()} type="submit">
+        <button aria-label="发送追问" className="prompt-send" data-empty={!followUp.trim() || disabled} disabled={disabled} type="submit">
           <Send size={16} />
         </button>
       </form>
@@ -237,15 +338,15 @@ function FollowUpComposer() {
   );
 }
 
-function TaskSummary({ task }: { task: AnalysisTask }) {
+function TaskSummary({ task, isRunning }: { task: AnalysisTask; isRunning: boolean }) {
   return (
     <div className="metric-grid">
       <div className="metric">
         <div className="metric-top">
-          <span className="status-light success" aria-label="已完成" />
+          <span className={`status-light ${task.status === "failed_recoverable" ? "danger" : "success"}`} aria-label={task.status} />
           <span className="subtitle">任务状态</span>
         </div>
-        <strong>已完成</strong>
+        <strong>{isRunning ? "运行中" : task.status === "completed" ? "已完成" : task.status === "failed_recoverable" ? "可恢复" : "待执行"}</strong>
       </div>
       <div className="metric">
         <div className="metric-top">

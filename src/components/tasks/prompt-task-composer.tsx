@@ -4,6 +4,7 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, ChevronDown, Send } from "lucide-react";
 import { sampleTask } from "@/lib/sample-task";
+import { createTask } from "@/lib/api";
 
 const analysisModels = [
   { id: "deep-analysis", label: "深度分析模型", description: "复杂归因与多表推理" },
@@ -14,10 +15,11 @@ const analysisModels = [
 export function PromptTaskComposer() {
   const router = useRouter();
   const [prompt, setPrompt] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedModel, setSelectedModel] = useState<(typeof analysisModels)[number]>(analysisModels[0]);
   const [isModelPickerOpen, setIsModelPickerOpen] = useState(false);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const formData = new FormData(event.currentTarget);
@@ -28,7 +30,16 @@ export function PromptTaskComposer() {
       return;
     }
 
-    router.push(`/tasks/${sampleTask.id}?q=${encodeURIComponent(trimmedPrompt)}&model=${selectedModel.id}`);
+    setIsSubmitting(true);
+    try {
+      const task = await createTask(trimmedPrompt, selectedModel.id);
+      router.push(`/tasks/${task.id}?run=1`);
+    } catch (error) {
+      console.error(error);
+      router.push(`/tasks/${sampleTask.id}?q=${encodeURIComponent(trimmedPrompt)}&model=${selectedModel.id}&offline=1`);
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -51,7 +62,8 @@ export function PromptTaskComposer() {
         <button
           aria-label="发送并创建任务"
           className="prompt-send"
-          data-empty={!prompt.trim()}
+          data-empty={!prompt.trim() || isSubmitting}
+          disabled={isSubmitting}
           type="submit"
         >
           <Send size={18} />

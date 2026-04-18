@@ -1,8 +1,11 @@
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/ui/page-header";
 import { dataSources } from "@/lib/sample-task";
+import { listDataSources } from "@/lib/api";
 
-export default function DataSourcesPage() {
+export default async function DataSourcesPage() {
+  const sources = await listDataSources().catch(() => dataSources);
+
   return (
     <AppShell active="/data-sources">
       <PageHeader
@@ -11,7 +14,7 @@ export default function DataSourcesPage() {
         subtitle="轻量管理数据源连接状态、Schema 同步和业务域权限，不做完整 DBA 或数据治理平台。"
       />
       <section className="list-grid">
-        {dataSources.map((source) => (
+        {sources.map((source) => (
           <article key={source.id} className="panel task-row">
             <div>
               <h2 style={{ margin: "0 0 8px" }}>{source.name}</h2>

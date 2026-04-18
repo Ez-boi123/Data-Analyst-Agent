@@ -3,8 +3,12 @@ import { ArrowRight } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { PromptTaskComposer } from "@/components/tasks/prompt-task-composer";
 import { sampleTask } from "@/lib/sample-task";
+import { listTasks } from "@/lib/api";
 
-export default function HomePage() {
+export default async function HomePage() {
+  const tasks = await listTasks().catch(() => [sampleTask]);
+  const history = tasks.length ? tasks : [sampleTask];
+
   return (
     <AppShell active="/">
       <section className="tasks-home-hero">
@@ -23,23 +27,25 @@ export default function HomePage() {
           <strong>历史任务</strong>
           <span className="status-pill">内置样例任务</span>
         </div>
-        <div className="task-row">
-          <div>
-            <h2 style={{ margin: "0 0 8px" }}>{sampleTask.title}</h2>
-            <p className="subtitle" style={{ margin: 0 }}>
-              {sampleTask.question} · {sampleTask.permissionsSummary}
-            </p>
-            <div className="tabs">
-              <span className="status-pill">证据时间线</span>
-              <span className="status-pill">SQL Diff</span>
-              <span className="status-pill">图表洞察</span>
-              <span className="status-pill">2 个追问分支</span>
+        {history.map((task) => (
+          <div className="task-row" key={task.id}>
+            <div>
+              <h2 style={{ margin: "0 0 8px" }}>{task.title}</h2>
+              <p className="subtitle" style={{ margin: 0 }}>
+                {task.question} · {task.permissionsSummary}
+              </p>
+              <div className="tabs">
+                <span className="status-pill">证据时间线</span>
+                <span className="status-pill">SQL Diff</span>
+                <span className="status-pill">图表洞察</span>
+                <span className="status-pill">{task.branches.length} 个追问分支</span>
+              </div>
             </div>
+            <Link aria-label="打开工作台" className="button primary icon-button" href={`/tasks/${task.id}`}>
+              <ArrowRight size={16} />
+            </Link>
           </div>
-          <Link aria-label="打开工作台" className="button primary icon-button" href={`/tasks/${sampleTask.id}`}>
-            <ArrowRight size={16} />
-          </Link>
-        </div>
+        ))}
       </section>
     </AppShell>
   );

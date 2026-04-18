@@ -1,8 +1,11 @@
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/ui/page-header";
 import { glossaryMetrics } from "@/lib/sample-task";
+import { listGlossaryMetrics } from "@/lib/api";
 
-export default function GlossaryPage() {
+export default async function GlossaryPage() {
+  const metrics = await listGlossaryMetrics().catch(() => glossaryMetrics);
+
   return (
     <AppShell active="/glossary">
       <PageHeader
@@ -11,7 +14,7 @@ export default function GlossaryPage() {
         subtitle="让 Agent 在生成 SQL 之前先理解指标定义、业务口径和负责人。"
       />
       <section className="list-grid">
-        {glossaryMetrics.map((metric) => (
+        {metrics.map((metric) => (
           <article key={metric.id} className="panel">
             <div className="panel-header">
               <strong>{metric.metric}</strong>

@@ -64,7 +64,7 @@ export type SqlExecutionView = {
 };
 
 export type InsightView = {
-  chartType: "line" | "bar" | "pie";
+  chartType: "line" | "bar" | "pie" | "scatter" | "bubble" | "table";
   chartConfig: {
     title: string;
     categories: string[];
@@ -109,6 +109,8 @@ export type AnalysisStep = {
   };
 };
 
+export type ResultCell = string | number | boolean | null;
+
 export type ResultRow = {
   date: string;
   region: string;
@@ -117,7 +119,7 @@ export type ResultRow = {
   orders: number;
   conversionRate: number;
   refundRate: number;
-};
+} & Record<string, ResultCell>;
 
 export type AnalysisTask = {
   id: string;
@@ -144,6 +146,11 @@ export type AnalysisTask = {
   }>;
   shareState: "private" | "shared";
   audit: AuditSummary;
+  messages?: Array<{
+    role: "user" | "assistant" | string;
+    content: string;
+    createdAt: string | number;
+  }>;
 };
 
 export type DataSource = {

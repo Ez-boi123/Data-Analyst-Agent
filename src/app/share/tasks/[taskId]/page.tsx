@@ -5,19 +5,26 @@ import { PageHeader } from "@/components/ui/page-header";
 import { ResultTable } from "@/components/workbench/result-table";
 import { InsightChart } from "@/components/workbench/insight-chart";
 import { sampleTask } from "@/lib/sample-task";
+import { getTask } from "@/lib/api";
 
-export default function ShareTaskPage() {
-  const insight = sampleTask.steps.find((step) => step.details.insight)?.details.insight;
-  const rows = sampleTask.steps.flatMap((step) => step.details.resultRows ?? []);
+type ShareTaskPageProps = {
+  params: Promise<{ taskId: string }>;
+};
+
+export default async function ShareTaskPage({ params }: ShareTaskPageProps) {
+  const { taskId } = await params;
+  const task = await getTask(taskId).catch(() => sampleTask);
+  const insight = task.steps.find((step) => step.details.insight)?.details.insight;
+  const rows = task.steps.flatMap((step) => step.details.resultRows ?? []);
 
   return (
     <AppShell active="/">
       <PageHeader
         eyebrow="Shared Task"
-        title={`${sampleTask.title} · 分享页`}
+        title={`${task.title} · 分享页`}
         subtitle="有权限成员可以审阅证据链、评论结论并继续追问，追问会生成新的分析分支。"
         actions={
-          <Link className="button primary" href={`/tasks/${sampleTask.id}`}>
+          <Link className="button primary" href={`/tasks/${task.id}`}>
             返回工作台
           </Link>
         }
@@ -54,7 +61,7 @@ export default function ShareTaskPage() {
             </button>
           </div>
           <div className="panel-body">
-            {sampleTask.comments.map((comment) => (
+            {task.comments.map((comment) => (
               <div key={comment.id} className="message">
                 <strong>{comment.author}</strong>
                 <p>{comment.body}</p>
@@ -64,7 +71,7 @@ export default function ShareTaskPage() {
               <GitBranch size={17} style={{ verticalAlign: "text-bottom" }} /> 分析分支
             </h3>
             <ul className="evidence-list">
-              {sampleTask.branches.map((branch) => (
+              {task.branches.map((branch) => (
                 <li key={branch.id}>
                   {branch.title}：{branch.delta}
                 </li>
