@@ -3,8 +3,8 @@ import { spawn } from "node:child_process";
 const commands = [
   {
     name: "backend",
-    command: "python",
-    args: ["-m", "uvicorn", "backend_app:app", "--host", "127.0.0.1", "--port", "8001"],
+    command: "node",
+    args: ["scripts/dev-backend.mjs"],
   },
   {
     name: "frontend",
