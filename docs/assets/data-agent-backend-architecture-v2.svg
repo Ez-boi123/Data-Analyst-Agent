@@ -179,5 +179,5 @@
 <text x="712" y="674" font-size="12" fill="#475569">模型调用</text>
 <line x1="756" y1="670" x2="782" y2="670" stroke="#64748b" stroke-width="2" marker-end="url(#arrow-64748b)"/>
 <text x="790" y="674" font-size="12" fill="#475569">异步事件</text>
-<text x="600" y="716" text-anchor="middle" font-size="11" fill="#94a3b8">生成文件：docs/data_agent_backend_architecture_v2.svg · 文字已按节点宽度拆行</text>
+<text x="600" y="716" text-anchor="middle" font-size="11" fill="#94a3b8">生成文件：docs/assets/data-agent-backend-architecture-v2.svg · 文字已按节点宽度拆行</text>
 </svg>

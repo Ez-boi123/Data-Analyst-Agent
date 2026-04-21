@@ -5,7 +5,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-OUT = ROOT / "docs" / "data_agent_backend_architecture_v2.svg"
+OUT = ROOT / "docs" / "assets" / "data-agent-backend-architecture-v2.svg"
 
 
 def tspan_lines(lines: list[str], x: int, y: int, size: int = 13, weight: str = "400", fill: str = "#334155") -> list[str]:
@@ -164,7 +164,7 @@ def main() -> None:
         lines.append(f'<text x="{lx + 34}" y="674" font-size="12" fill="#475569">{escape(text)}</text>')
         lx += 78 if len(text) <= 4 else 92
 
-    lines.append('<text x="600" y="716" text-anchor="middle" font-size="11" fill="#94a3b8">生成文件：docs/data_agent_backend_architecture_v2.svg · 文字已按节点宽度拆行</text>')
+    lines.append('<text x="600" y="716" text-anchor="middle" font-size="11" fill="#94a3b8">生成文件：docs/assets/data-agent-backend-architecture-v2.svg · 文字已按节点宽度拆行</text>')
     lines.append("</svg>")
 
     OUT.write_text("\n".join(lines), encoding="utf-8")

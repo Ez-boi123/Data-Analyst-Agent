@@ -8,8 +8,8 @@ const root = path.resolve(__dirname, "..");
 const require = createRequire(import.meta.url);
 const { chromium } = require("../node_modules/playwright");
 
-const input = path.join(root, "docs", "data_agent_backend_architecture_v2.svg");
-const output = path.join(root, "docs", "data_agent_backend_architecture_v2.png");
+const input = path.join(root, "docs", "assets", "data-agent-backend-architecture-v2.svg");
+const output = path.join(root, "docs", "assets", "data-agent-backend-architecture-v2.png");
 const chromePath = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 
 const browser = await chromium.launch({

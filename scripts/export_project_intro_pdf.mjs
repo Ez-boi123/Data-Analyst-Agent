@@ -9,9 +9,9 @@ const root = path.resolve(__dirname, "..");
 const require = createRequire(import.meta.url);
 const { chromium } = require("../node_modules/playwright");
 
-const input = path.join(root, "docs", "project_introduction.md");
-const output = path.join(root, "docs", "project_introduction.pdf");
-const htmlOutput = path.join(root, "docs", "project_introduction.html");
+const input = path.join(root, "docs", "product", "project-introduction.md");
+const output = path.join(root, "docs", "assets", "project-introduction.pdf");
+const htmlOutput = path.join(root, "docs", "assets", "project-introduction.html");
 const chromePath = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 
 function escapeHtml(value) {
