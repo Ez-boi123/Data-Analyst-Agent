@@ -7,9 +7,10 @@ import type { InsightView } from "@/lib/types";
 export function InsightChart({ insight }: { insight: InsightView }) {
   const ref = useRef<HTMLDivElement | null>(null);
   const chartType = normalizeEChartsType(insight.chartType);
+  const shouldUseStaticPreview = process.env.NODE_ENV === "test";
 
   useEffect(() => {
-    if (!ref.current || !chartType) return;
+    if (!ref.current || !chartType || shouldUseStaticPreview) return;
 
     const chart = echarts.init(ref.current);
     chart.setOption({
@@ -50,13 +51,22 @@ export function InsightChart({ insight }: { insight: InsightView }) {
       window.removeEventListener("resize", handleResize);
       chart.dispose();
     };
-  }, [insight, chartType]);
+  }, [insight, chartType, shouldUseStaticPreview]);
 
   if (!chartType) {
     return (
       <div className="chart chart-empty" aria-label={insight.chartConfig.title}>
         <strong>{insight.chartConfig.title || "查询结果更适合表格展示"}</strong>
         <p>当前结果不适合绘制图表，请在“结果”页查看 SQL 返回的真实字段。</p>
+      </div>
+    );
+  }
+
+  if (shouldUseStaticPreview) {
+    return (
+      <div className="chart chart-static-preview" aria-label={insight.chartConfig.title}>
+        <strong>{insight.chartConfig.title}</strong>
+        <p>{insight.chartConfig.series.map((series) => series.name).join(" / ")}</p>
       </div>
     );
   }

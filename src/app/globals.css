@@ -596,18 +596,29 @@ select {
 }
 
 .chat-collapsed .chat-collapsed-trigger {
-  display: grid;
-  gap: 8px;
+  position: relative;
+  display: block;
   width: 100%;
-  height: auto;
-  padding: 16px 0 12px;
+  height: 136px;
+  padding: 0;
   border: 0;
   background: transparent;
 }
 
+.chat-collapsed .chat-collapsed-trigger svg {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
 .chat-collapsed .chat-collapsed-trigger span {
-  writing-mode: vertical-rl;
-  text-orientation: mixed;
+  position: absolute;
+  top: 82px;
+  left: 50%;
+  transform: translateX(-50%) rotate(90deg);
+  transform-origin: center;
+  white-space: nowrap;
   color: var(--accent-strong);
   font-weight: 700;
 }
@@ -653,6 +664,11 @@ select {
   padding: 6px 7px 6px 16px;
   border-color: #c9d0d9;
   box-shadow: 0 6px 18px rgba(31, 35, 41, 0.07), 0 0 0 2px rgba(51, 112, 255, 0.04);
+}
+
+.follow-up-launcher .prompt-composer:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px rgba(51, 112, 255, 0.14), 0 10px 24px rgba(31, 35, 41, 0.1);
 }
 
 .follow-up-launcher .prompt-composer input {
@@ -858,6 +874,37 @@ select {
   color: #fde68a;
 }
 
+.insight-detail {
+  display: grid;
+  gap: 14px;
+}
+
+.insight-chart-panel {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfdff;
+}
+
+.insight-chart-panel .chart {
+  height: 280px;
+}
+
+.insight-narrative {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.insight-headline {
+  grid-column: 1 / -1;
+  margin: 0 0 2px;
+  color: var(--text);
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
 .table-wrap {
   overflow: auto;
   border: 1px solid var(--line);
@@ -915,6 +962,21 @@ tbody tr:hover {
 }
 
 .chart-empty p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.chart-static-preview {
+  display: grid;
+  align-content: center;
+  gap: 8px;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: linear-gradient(180deg, #fbfdff 0%, #f4f8ff 100%);
+}
+
+.chart-static-preview p {
   margin: 0;
   color: var(--muted);
 }

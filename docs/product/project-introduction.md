@@ -57,8 +57,8 @@ Data Analyst Agent 是一个面向多业务、多表数据场景的智能数据�
 
 已有详细架构图可参考：
 
-- [backend_architecture.md](backend_architecture.md)
-- [agent_backend_architecture_fireworks.svg](agent_backend_architecture_fireworks.svg)
+- [后端架构说明](../backend/architecture.md)
+- [后端架构图 Fireworks 版](../assets/agent-backend-architecture-fireworks.svg)
 
 ## 4. 数据库设计
 

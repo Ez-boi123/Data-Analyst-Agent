@@ -6,7 +6,7 @@
 
 已按 `fireworks-tech-graph` 的扁平技术图风格生成展示版 SVG：
 
-- [agent_backend_architecture_fireworks.svg](agent_backend_architecture_fireworks.svg)
+- [agent-backend-architecture-fireworks.svg](../assets/agent-backend-architecture-fireworks.svg)
 
 ## 1. 后端总体架构
 

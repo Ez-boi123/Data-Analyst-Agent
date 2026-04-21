@@ -4,6 +4,8 @@
 # Python
 __pycache__/
 *.py[cod]
+*.egg-info/
+.venv/
 *.pyo
 .pytest_cache/
 .mypy_cache/
@@ -18,13 +20,27 @@ __pycache__/
 node_modules/
 .next/
 out/
+build/
 dist/
+*.tsbuildinfo
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
+
+# Test and coverage output
+coverage/
+playwright-report/
+test-results/
 
 # Local tooling and generated runtime files
 .tools/
+.codex/
+.superpowers/
+.turbo/
+.vite/
+.vercel/
+.eslintcache
 Data-Analyst-Agent-main/
 *.log
 
@@ -34,4 +50,4 @@ Data-Analyst-Agent-main/
 *.zip
 
 # Generated intermediate docs
-docs/project_introduction.html
+docs/assets/project-introduction.html

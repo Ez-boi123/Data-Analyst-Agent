@@ -22,7 +22,7 @@ import { SchemaGraph } from "./schema-graph";
 import { ResultTable } from "./result-table";
 import { InsightChart } from "./insight-chart";
 
-const tabLabels = ["口径", "Schema", "SQL", "结果", "洞察", "审计"] as const;
+const tabLabels = ["洞察", "口径", "Schema", "SQL", "结果", "审计"] as const;
 type DetailTab = (typeof tabLabels)[number];
 
 const analysisModels = [
@@ -67,11 +67,12 @@ const sqlKeywords = new Set([
 const sqlFunctions = new Set(["SUM", "COUNT", "AVG", "MIN", "MAX", "ROUND", "COALESCE", "DATE_TRUNC"]);
 
 export function AnalysisWorkbench({ initialTask, autoRun = false }: { initialTask: AnalysisTask; autoRun?: boolean }) {
+  const initialSelection = getDefaultStepSelection(initialTask);
   const [task, setTask] = useState(initialTask);
   const [isRunning, setIsRunning] = useState(false);
   const [streamingInsight, setStreamingInsight] = useState("");
-  const [activeStepId, setActiveStepId] = useState("step-repair");
-  const [activeTab, setActiveTab] = useState<DetailTab>("SQL");
+  const [activeStepId, setActiveStepId] = useState(initialSelection.stepId);
+  const [activeTab, setActiveTab] = useState<DetailTab>(initialSelection.tab);
   const [isChatExpanded, setIsChatExpanded] = useState(true);
   const autoRunStarted = useRef(false);
   const activeStep = useMemo(
@@ -80,7 +81,10 @@ export function AnalysisWorkbench({ initialTask, autoRun = false }: { initialTas
   );
 
   useEffect(() => {
+    const selection = getDefaultStepSelection(initialTask);
     setTask(initialTask);
+    setActiveStepId(selection.stepId);
+    setActiveTab(selection.tab);
   }, [initialTask]);
 
   useEffect(() => {
@@ -258,6 +262,20 @@ export function AnalysisWorkbench({ initialTask, autoRun = false }: { initialTas
   );
 }
 
+function getDefaultStepSelection(task: AnalysisTask): { stepId: string; tab: DetailTab } {
+  const insightStep = task.steps.find((step) => step.details.insight);
+  if (insightStep) {
+    return { stepId: insightStep.id, tab: "洞察" };
+  }
+
+  const sqlStep = task.steps.find((step) => step.details.sql);
+  if (sqlStep) {
+    return { stepId: sqlStep.id, tab: "SQL" };
+  }
+
+  return { stepId: task.steps[0]?.id ?? "", tab: "口径" };
+}
+
 function mergeStep(task: AnalysisTask, step: AnalysisStep): AnalysisTask {
   const index = task.steps.findIndex((item) => item.id === step.id);
   const steps = index >= 0 ? [...task.steps] : [...task.steps, step];
@@ -408,10 +426,14 @@ function StepDetails({
   activeTab: DetailTab;
   onTabChange: (tab: DetailTab) => void;
 }) {
+  const schema = step.details.schema ?? task.steps.find((item) => item.details.schema)?.details.schema;
+  const sqlStep = step.details.sql ? step : task.steps.find((item) => item.details.sql);
+  const assumptions = schema?.assumptions ?? ["不展示原始模型思维链，只展示可验证证据。"];
+
   return (
     <div className="panel" style={{ marginTop: 16 }}>
       <div className="panel-header">
-        <strong>{step.title} · 详情</strong>
+        <strong>{getStepDetailsTitle(step)}</strong>
         <span className="status-pill">置信度 {Math.round(step.confidence * 100)}%</span>
       </div>
       <div className="panel-body">
@@ -425,17 +447,25 @@ function StepDetails({
         {activeTab === "口径" && (
           <div className="two-col">
             <InfoList title="证据化解释" items={step.evidence} />
-            <InfoList title="业务假设" items={step.details.schema?.assumptions ?? ["不展示原始模型思维链，只展示可验证证据。"]} />
+            <InfoList title="业务假设" items={assumptions} />
           </div>
         )}
-        {activeTab === "Schema" && step.details.schema && <SchemaGraph schema={step.details.schema} />}
-        {activeTab === "SQL" && <SqlPanel step={step} />}
+        {activeTab === "Schema" && (schema ? <SchemaGraph schema={schema} /> : <p className="subtitle">当前任务还没有可展示的 Schema 证据。</p>)}
+        {activeTab === "SQL" && (sqlStep ? <SqlPanel step={sqlStep} /> : <p className="subtitle">当前任务还没有生成 SQL。</p>)}
         {activeTab === "结果" && <ResultTable rows={step.details.resultRows ?? task.steps.flatMap((item) => item.details.resultRows ?? []).slice(0, 7)} />}
         {activeTab === "洞察" && <InsightSection step={step} />}
         {activeTab === "审计" && <InfoList title="任务级审计" items={getTaskAuditItems(task)} />}
       </div>
     </div>
   );
+}
+
+function getStepDetailsTitle(step: AnalysisStep) {
+  if (step.details.insight) {
+    return "洞察图表与行动建议";
+  }
+
+  return `${step.title} · 详情`;
 }
 
 function SqlPanel({ step }: { step: AnalysisStep }) {
@@ -505,10 +535,12 @@ function InsightSection({ step }: { step: AnalysisStep }) {
   }
 
   return (
-    <div className="detail-grid">
-      <InsightChart insight={insight} />
-      <div>
-        <h3 style={{ marginTop: 0 }}>{insight.headline}</h3>
+    <div className="insight-detail">
+      <div className="insight-chart-panel">
+        <InsightChart insight={insight} />
+      </div>
+      <div className="insight-narrative">
+        <h3 className="insight-headline">{insight.headline}</h3>
         <InfoList title="关键证据" items={insight.evidence} />
         <InfoList title="可能原因" items={insight.possibleCauses} />
         <InfoList title="下一步建议" items={insight.recommendedNextSteps} />
