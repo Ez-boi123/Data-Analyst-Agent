@@ -22,7 +22,7 @@ describe("AnalysisWorkbench", () => {
 
     expect(screen.getByText("字段不存在：fact_refunds.refund_amount。Schema 中可用字段为 refund_amt。")).toBeInTheDocument();
     expect(screen.getByText("结果预览")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "打开分享页" })).toHaveAttribute("href", "/share/tasks/task-gmv-east-7d");
+    expect(screen.getByRole("link", { name: /分享任务/ })).toHaveAttribute("href", "/share/tasks/task-gmv-east-7d");
     expect(screen.getByRole("textbox", { name: "输入追问" })).toBeInTheDocument();
   });
 });

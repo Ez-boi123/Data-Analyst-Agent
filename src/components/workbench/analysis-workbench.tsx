@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ArrowRight,
   CheckCircle2,
   Check,
   ChevronDown,
@@ -227,10 +226,6 @@ export function AnalysisWorkbench({ initialTask, autoRun = false }: { initialTas
         <div className="panel">
           <div className="panel-header">
             <strong>证据时间线</strong>
-            <Link className="button" href={`/share/tasks/${task.id}`}>
-              打开分享页
-              <ArrowRight size={16} />
-            </Link>
           </div>
           <div className="panel-body">
             <div className="timeline">
