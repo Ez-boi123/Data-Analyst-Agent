@@ -1,4 +1,7 @@
 import { spawn } from "node:child_process";
+import { existsSync } from "node:fs";
+
+const pythonCommand = existsSync(".venv/bin/python") ? ".venv/bin/python" : "python";
 
 const commands = [
   {
