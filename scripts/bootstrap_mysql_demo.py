@@ -77,12 +77,15 @@ def load_orders(path: Path) -> pd.DataFrame:
     if not path.exists():
         raise FileNotFoundError(f"CSV not found: {path}")
     df = pd.read_csv(path)
-    df = df.drop(columns=[column for column in df.columns if str(column).startswith("Unnamed:")])
+    df.columns = [str(column).strip() for column in df.columns]
+    df = df.drop(columns=[column for column in df.columns if not str(column).strip() or str(column).startswith("Unnamed:")])
     required = ["invoice_no", "customer_id", "gender", "age", "category", "quantity", "price", "payment_method", "invoice_date"]
     missing = [column for column in required if column not in df.columns]
     if missing:
         raise ValueError(f"CSV is missing required columns: {missing}")
     df = df[required].copy()
+    for column in ["invoice_no", "customer_id", "gender", "category", "payment_method"]:
+        df[column] = df[column].astype(str).str.strip()
     df["invoice_date"] = pd.to_datetime(df["invoice_date"], errors="coerce").dt.date
     if df["invoice_date"].isna().any():
         raise ValueError("invoice_date contains invalid date values.")
