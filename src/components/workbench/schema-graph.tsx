@@ -17,7 +17,7 @@ export function SchemaGraph({ schema }: { schema: SchemaEvidence }) {
               <strong>{table.name}</strong>
               <br />
               <small>
-                {table.domain} · {Math.round(table.confidence * 100)}%
+                {table.domain} · {table.confidence == null ? "置信度未评估" : `${Math.round(table.confidence * 100)}%`}
               </small>
             </div>
           )
@@ -41,7 +41,7 @@ export function SchemaGraph({ schema }: { schema: SchemaEvidence }) {
         id: `edge-${index}`,
         source: schema.tables.find((table) => path.from.includes(table.id.replace("s", "")))?.id ?? schema.tables[0].id,
         target: schema.tables.find((table) => path.to.includes(table.id.replace("s", "")))?.id ?? schema.tables[1].id,
-        label: `${Math.round(path.confidence * 100)}%`,
+        label: path.confidence == null ? "候选关联" : `${Math.round(path.confidence * 100)}%`,
         animated: true,
         style: { stroke: "#3370ff", strokeWidth: 1.6 },
         labelStyle: { fill: "#245bdb", fontWeight: 600 },
@@ -59,11 +59,25 @@ export function SchemaGraph({ schema }: { schema: SchemaEvidence }) {
         </ReactFlow>
       </div>
       <div>
+        {schema.assessment && (
+          <section aria-label="Schema 评分依据">
+            <h3>Schema 评分依据</h3>
+            <p>{schema.assessment.scope}</p>
+            <p>{schema.assessment.method}</p>
+            <ul className="evidence-list">
+              {Object.entries(schema.assessment.components).map(([name, score]) => (
+                <li key={name}>{name}：{Math.round(score * 100)}%</li>
+              ))}
+              {schema.assessment.warnings.map((warning, index) => <li key={index}>{warning}</li>)}
+            </ul>
+          </section>
+        )}
         <h3 style={{ marginTop: 0 }}>关联路径 Join Path</h3>
         <ul className="evidence-list">
           {schema.joinPaths.map((path) => (
             <li key={`${path.from}-${path.to}`}>
-              {path.condition} · 置信度 {Math.round(path.confidence * 100)}%
+              {path.condition} · 置信度 {path.confidence == null ? "未评估" : `${Math.round(path.confidence * 100)}%`}
+              {path.assessment && <p>{path.assessment.method}。{Object.entries(path.assessment.components).map(([key, value]) => `${key} ${Math.round(value * 100)}%`).join("；")}</p>}
             </li>
           ))}
         </ul>
@@ -72,6 +86,7 @@ export function SchemaGraph({ schema }: { schema: SchemaEvidence }) {
           {schema.tables.map((table) => (
             <li key={table.id}>
               {table.name}：{table.reason}
+              {table.assessment && <p>{table.assessment.method}。{Object.entries(table.assessment.components).map(([key, value]) => `${key} ${Math.round(value * 100)}%`).join("；")}</p>}
             </li>
           ))}
         </ul>

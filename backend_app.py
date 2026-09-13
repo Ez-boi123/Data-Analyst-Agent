@@ -358,6 +358,7 @@ def upsert_step(task: StoredTask, event: Any, schema: SchemaProfile) -> dict[str
     existing["evidence"] = step_evidence(step_type, event.message)
     if step_type in {"schema_retrieval", "relation_reasoning"}:
         existing["details"]["schema"] = schema_evidence_view(schema)
+        existing["confidence"] = (schema.assessment or {}).get("score")
     if event.sql:
         existing["details"]["sql"] = sql_execution_view(sql=event.sql)
     if event.error:
@@ -452,8 +453,10 @@ def apply_final_details(task: StoredTask, run: AgentRun, schema: SchemaProfile) 
 
     schema_step = ensure_step(task, "schema_retrieval", "检索相关 Schema")
     schema_step["details"]["schema"] = schema_view
+    schema_step["confidence"] = (schema.assessment or {}).get("score")
     relation_step = ensure_step(task, "relation_reasoning", "推理表关联路径")
     relation_step["details"]["schema"] = schema_view
+    relation_step["confidence"] = (schema.assessment or {}).get("score")
 
 
 def ensure_step(task: StoredTask, step_type: str, title: str) -> dict[str, Any]:
@@ -488,7 +491,7 @@ def initial_clarifying_step(request: CreateTaskRequest) -> dict[str, Any]:
             "SQL：只允许 SELECT / WITH",
             "结果：默认限行 500",
         ],
-        "confidence": 0.9,
+        "confidence": None,
         "startedAt": iso_now(),
         "finishedAt": iso_now(),
         "details": {
@@ -512,7 +515,7 @@ def error_step(message: str) -> dict[str, Any]:
         "title": "可恢复失败",
         "summary": message,
         "evidence": [message],
-        "confidence": 0.5,
+        "confidence": None,
         "startedAt": iso_now(),
         "finishedAt": iso_now(),
         "details": {"recoveryActions": ["检查模型配置", "补充数据源配置", "修改问题后重试"]},
@@ -558,13 +561,15 @@ def repair_attempts_view(repair_steps: list[Any]) -> list[dict[str, Any]]:
 
 def schema_evidence_view(schema: SchemaProfile) -> dict[str, Any]:
     return {
+        "assessment": schema.assessment,
         "tables": [
             {
                 "id": table.name,
                 "name": table.name,
                 "domain": domain_for_table(table.name),
                 "reason": f"包含 {table.row_count:,} 行、{len(table.columns)} 个字段，可支撑当前分析。",
-                "confidence": 0.9,
+                "confidence": (table.assessment or {}).get("score"),
+                "assessment": table.assessment,
                 "fields": [
                     {
                         "name": column.name,
@@ -582,7 +587,8 @@ def schema_evidence_view(schema: SchemaProfile) -> dict[str, Any]:
                 "from": f"{relation.left_table}.{relation.left_column}",
                 "to": f"{relation.right_table}.{relation.right_column}",
                 "condition": f"{relation.left_table}.{relation.left_column} = {relation.right_table}.{relation.right_column}",
-                "confidence": 0.82,
+                "confidence": (relation.assessment or {}).get("score"),
+                "assessment": relation.assessment,
             }
             for relation in schema.relations[:12]
         ],
@@ -662,7 +668,8 @@ def relation_to_view(relation: Any) -> dict[str, Any]:
     return {
         "from": {"table": relation.left_table, "field": relation.left_column},
         "to": {"table": relation.right_table, "field": relation.right_column},
-        "confidence": 0.82,
+        "confidence": (relation.assessment or {}).get("score"),
+        "assessment": relation.assessment,
         "reason": relation.reason,
     }
 
@@ -688,8 +695,9 @@ def map_step_status(step_type: str, status: str) -> str:
     return step_type if step_type != "insight_generation" else "insight_generation"
 
 
-def default_confidence(step_type: str) -> float:
-    return 0.86 if step_type in {"schema_retrieval", "relation_reasoning"} else 0.78
+def default_confidence(step_type: str) -> None:
+    # No calibrated confidence scoring has been implemented.
+    return None
 
 
 def step_status(status: str) -> str:
@@ -714,7 +722,7 @@ def step_evidence(step_type: str, message: str) -> list[str]:
 
 
 def audit_view(task: StoredTask) -> dict[str, Any]:
-    repair_count = len(task.lastRun.repair_steps) if task.lastRun else 0
+    repair_count = sum(1 for step in task.steps if step["type"] == "sql_repairing" and step["status"] != "waiting")
     return {
         "initiator": task.createdBy,
         "dataDomainsUsed": [task.businessDomain],

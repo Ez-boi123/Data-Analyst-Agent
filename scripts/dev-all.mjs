@@ -1,7 +1,8 @@
-import { spawn } from "node:child_process";
-import { existsSync } from "node:fs";
+import { spawn, spawnSync } from "node:child_process";
 
-const pythonCommand = existsSync(".venv/bin/python") ? ".venv/bin/python" : "python";
+import { getNpmSpawnSpec, getProcessTreeStopSpec } from "./runtime-paths.mjs";
+
+const frontendCommand = getNpmSpawnSpec(["run", "dev"]);
 
 const commands = [
   {
@@ -11,8 +12,8 @@ const commands = [
   },
   {
     name: "frontend",
-    command: "npm",
-    args: ["run", "dev"],
+    command: frontendCommand.command,
+    args: frontendCommand.args,
   },
 ];
 
@@ -35,7 +36,12 @@ function stopAll(signal = "SIGTERM") {
   shuttingDown = true;
   for (const child of children) {
     if (!child.killed) {
-      child.kill(signal);
+      const stopSpec = getProcessTreeStopSpec(child.pid);
+      if (stopSpec) {
+        spawnSync(stopSpec.command, stopSpec.args, { stdio: "ignore" });
+      } else {
+        child.kill(signal);
+      }
     }
   }
 }

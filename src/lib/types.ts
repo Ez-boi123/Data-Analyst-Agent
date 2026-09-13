@@ -16,12 +16,21 @@ export type StepStatus = "waiting" | "running" | "completed" | "failed_recoverab
 
 export type AnalysisStepType = TaskStatus;
 
+export type SchemaAssessment = {
+  score: number | null;
+  method: string;
+  components: Record<string, number>;
+  warnings: string[];
+  scope: string;
+};
+
 export type SchemaTable = {
+  assessment?: SchemaAssessment | null;
   id: string;
   name: string;
   domain: string;
   reason: string;
-  confidence: number;
+  confidence: number | null;
   fields: Array<{
     name: string;
     type: string;
@@ -30,13 +39,15 @@ export type SchemaTable = {
 };
 
 export type SchemaEvidence = {
+  assessment?: SchemaAssessment | null;
   tables: SchemaTable[];
   fields: string[];
   joinPaths: Array<{
+    assessment?: SchemaAssessment | null;
     from: string;
     to: string;
     condition: string;
-    confidence: number;
+    confidence: number | null;
   }>;
   metricDefinitions: Array<{
     metric: string;
@@ -96,7 +107,7 @@ export type AnalysisStep = {
   title: string;
   summary: string;
   evidence: string[];
-  confidence: number;
+  confidence: number | null;
   startedAt?: string;
   finishedAt?: string;
   details: {

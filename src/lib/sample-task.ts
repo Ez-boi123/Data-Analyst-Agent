@@ -348,7 +348,8 @@ export function getTaskAuditItems(task: AnalysisTask): string[] {
     `执行 SQL：${task.audit.sqlExecuted} 次`,
     `自修复：${task.audit.repairCount} 次`,
     `分享对象：${task.audit.sharedWith.join("、")}`,
-    `追问分支：${task.audit.followUps} 个`
+    `追问：${task.audit.followUps} 次`,
+    `子任务分支：${task.branches.length} 个`
   ];
 }
 

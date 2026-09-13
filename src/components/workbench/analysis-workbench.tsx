@@ -3,7 +3,10 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
+  AlertCircle,
   CheckCircle2,
+  Clock,
+  LoaderCircle,
   Check,
   ChevronDown,
   ChevronsLeft,
@@ -113,6 +116,9 @@ export function AnalysisWorkbench({ initialTask, autoRun = false }: { initialTas
   function handleStreamEvent(event: AgentStreamEvent) {
     if (event.event === "task") {
       setTask(event.data);
+      if (event.data.messages?.at(-1)?.role === "assistant") {
+        setStreamingInsight("");
+      }
     }
     if (event.event === "step") {
       setTask((current) => mergeStep(current, event.data));
@@ -137,7 +143,7 @@ export function AnalysisWorkbench({ initialTask, autoRun = false }: { initialTas
             title: "可恢复失败",
             summary: event.data.message,
             evidence: [event.data.message],
-            confidence: 0.5,
+            confidence: null,
             details: { recoveryActions: ["检查后端服务", "检查模型配置", "修改问题后重试"] }
           }
         ]
@@ -280,7 +286,11 @@ function mergeStep(task: AnalysisTask, step: AnalysisStep): AnalysisTask {
   return {
     ...task,
     status: step.status === "failed_recoverable" ? "failed_recoverable" : step.type,
-    steps
+    steps,
+    audit: {
+      ...task.audit,
+      repairCount: steps.filter((item) => item.type === "sql_repairing" && item.status !== "waiting").length
+    }
   };
 }
 
@@ -352,6 +362,7 @@ function FollowUpComposer({ disabled, onSubmit }: { disabled: boolean; onSubmit:
 }
 
 function TaskSummary({ task, isRunning }: { task: AnalysisTask; isRunning: boolean }) {
+  const assessment = [...task.steps].reverse().find((step) => step.details.schema?.assessment)?.details.schema?.assessment;
   return (
     <div className="metric-grid">
       <div className="metric">
@@ -366,7 +377,10 @@ function TaskSummary({ task, isRunning }: { task: AnalysisTask; isRunning: boole
           <Table2 size={17} />
           <span className="subtitle">Schema 置信度</span>
         </div>
-        <strong>92%</strong>
+        <strong title={assessment?.scope ?? "尚无评估数据"}>
+          {assessment?.score == null ? "未评估" : `${Math.round(assessment.score * 100)}%`}
+        </strong>
+        {assessment?.score != null && <small>结构质量规则评估</small>}
       </div>
       <div className="metric">
         <div className="metric-top">
@@ -378,15 +392,23 @@ function TaskSummary({ task, isRunning }: { task: AnalysisTask; isRunning: boole
       <div className="metric">
         <div className="metric-top">
           <GitBranch size={17} />
-          <span className="subtitle">追问分支</span>
+          <span className="subtitle">追问与分支</span>
         </div>
-        <strong>{task.branches.length} 个</strong>
+        <strong>{task.audit.followUps} 次追问 · {task.branches.length} 个分支</strong>
       </div>
     </div>
   );
 }
 
 function TimelineStep({ step, isActive, onSelect }: { step: AnalysisStep; isActive: boolean; onSelect: () => void }) {
+  const statusDisplay = {
+    waiting: { label: "等待执行", icon: Clock },
+    running: { label: "运行中", icon: LoaderCircle },
+    completed: { label: "完成", icon: CheckCircle2 },
+    failed_recoverable: { label: "可恢复", icon: AlertCircle }
+  }[step.status];
+  const StatusIcon = statusDisplay.icon;
+
   return (
     <button className={`step ${isActive ? "active" : ""}`} type="button" onClick={onSelect}>
       <div className="step-top">
@@ -397,8 +419,8 @@ function TimelineStep({ step, isActive, onSelect }: { step: AnalysisStep; isActi
           </p>
         </div>
         <span className={`status-pill ${step.status === "failed_recoverable" ? "danger" : ""}`}>
-          <CheckCircle2 size={13} />
-          {step.status === "failed_recoverable" ? "可恢复" : "完成"}
+          <StatusIcon size={13} />
+          {statusDisplay.label}
         </span>
       </div>
       <ul className="evidence-list">
@@ -429,7 +451,7 @@ function StepDetails({
     <div className="panel" style={{ marginTop: 16 }}>
       <div className="panel-header">
         <strong>{getStepDetailsTitle(step)}</strong>
-        <span className="status-pill">置信度 {Math.round(step.confidence * 100)}%</span>
+        <span className="status-pill">置信度 {step.confidence == null ? "未评估" : `${Math.round(step.confidence * 100)}%${step.details.schema?.assessment ? "（规则评估）" : ""}`}</span>
       </div>
       <div className="panel-body">
         <div className="tabs" role="tablist" aria-label="阶段详情">

@@ -1,19 +1,12 @@
-import { existsSync, rmSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
 
-const venvDir = join(process.cwd(), ".venv");
-const venvPython = join(venvDir, "bin", "python");
+import { getPythonCandidates, getVenvPythonPath } from "./runtime-paths.mjs";
 
-const candidates = [
-  process.env.PYTHON,
-  "/opt/homebrew/bin/python3",
-  "/usr/local/bin/python3",
-  "/Library/Frameworks/Python.framework/Versions/Current/bin/python3",
-  "/usr/bin/python3",
-  "python3",
-  "python",
-].filter(Boolean);
+const venvDir = join(process.cwd(), ".venv");
+const venvPython = getVenvPythonPath();
+const candidates = getPythonCandidates();
 
 function run(command, args, options = {}) {
   return spawnSync(command, args, {
@@ -61,40 +54,37 @@ function findPython() {
   return { command: null, resolved: "", diagnostics };
 }
 
-const python = findPython();
+if (!existsSync(venvPython)) {
+  const python = findPython();
 
-if (!python.command) {
-  console.error("[setup:backend] 没找到可用的非 conda Python。");
-  if (python.diagnostics.length) {
-    console.error("[setup:backend] 候选 Python 诊断：");
-    for (const item of python.diagnostics) {
-      console.error(`[setup:backend] - ${item}`);
+  if (!python.command) {
+    console.error("[setup:backend] 没找到可用的 Python。");
+    if (python.diagnostics.length) {
+      console.error("[setup:backend] 候选 Python 诊断：");
+      for (const item of python.diagnostics) {
+        console.error(`[setup:backend] - ${item}`);
+      }
     }
+    console.error("[setup:backend] 请先安装 Python 3，然后重新运行 npm run setup。");
+    process.exit(1);
   }
-  console.error("[setup:backend] 请先安装官方 Python 或 Homebrew Python，然后运行：");
-  console.error("[setup:backend]   PYTHON=/path/to/python3 npm run setup:backend");
-  process.exit(1);
-}
 
-console.log(`[setup:backend] 使用 Python: ${python.resolved}`);
-
-if (existsSync(venvDir)) {
-  console.log("[setup:backend] 删除旧的 .venv");
-  rmSync(venvDir, { recursive: true, force: true });
-}
-
-console.log("[setup:backend] 创建 .venv");
-let result = spawnSync(python.command, ["-m", "venv", ".venv"], {
-  cwd: process.cwd(),
-  env: process.env,
-  stdio: "inherit",
-});
-if (result.status !== 0) {
-  process.exit(result.status ?? 1);
+  console.log(`[setup:backend] 使用 Python: ${python.resolved}`);
+  console.log("[setup:backend] 创建 .venv");
+  const createResult = spawnSync(python.command, ["-m", "venv", venvDir], {
+    cwd: process.cwd(),
+    env: process.env,
+    stdio: "inherit",
+  });
+  if (createResult.status !== 0) {
+    process.exit(createResult.status ?? 1);
+  }
+} else {
+  console.log(`[setup:backend] 复用现有虚拟环境: ${venvPython}`);
 }
 
 console.log("[setup:backend] 安装 requirements.txt");
-result = spawnSync(venvPython, ["-m", "pip", "install", "-r", "requirements.txt"], {
+const result = spawnSync(venvPython, ["-m", "pip", "install", "-r", "requirements.txt"], {
   cwd: process.cwd(),
   env: process.env,
   stdio: "inherit",
